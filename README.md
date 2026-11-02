@@ -74,11 +74,22 @@ Paths are resolved via Pi's SDK (`CONFIG_DIR_NAME` and `getAgentDir()`), so they
 }
 ```
 
+#### Increase rootfs disk size
+
+```json
+{
+  "rootfs": {
+    "size": "20G"
+  }
+}
+```
+
 ### Supported options
 
 Any option accepted by Gondolin's `VM.create()` -- commonly:
 - `memory`
 - `cpus`
+- `rootfs.size`
 - `vfs` (VfsOptions)
 
 **NOTE**: The `vfs.mounts["/workspace"]` property is always ignored. The workspace mount (`/workspace` → project root) is mandatory and cannot be overridden. Other `vfs.mounts` entries and `vfs` settings are preserved and passed through.
