@@ -1,6 +1,6 @@
 {
   "name": "pi-gondolin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Run pi's tools inside a Gondolin micro-VM sandbox",
   "license": "MIT",
   "dependencies": {
