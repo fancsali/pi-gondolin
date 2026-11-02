@@ -16,29 +16,12 @@ Your working directory is mounted read-write at `/workspace` inside the VM. The 
 ## Install
 
 ```sh
-git clone https://github.com/pasky/pi-gondolin
-cd pi-gondolin
-npm install
+pi install git:github.com/fancsali/pi-gondolin
 ```
 
 ## Usage
 
-Load the extension explicitly when starting pi:
-
-```sh
-cd /your/project
-pi -e /path/to/pi-gondolin/index.ts
-```
-
-Or register it permanently in `~/.pi/agent/settings.json` (project-specific or global):
-
-```json
-{
-  "extensions": ["/path/to/pi-gondolin"]
-}
-```
-
-On first run, gondolin downloads a guest image (~200 MB) into `~/.cache/gondolin/`.
+Pi will load the extension automatically. On first run, gondolin downloads a guest image (~200 MB) into `~/.cache/gondolin/`.
 
 ## What it does
 
