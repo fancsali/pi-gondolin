@@ -19,9 +19,14 @@
  *               sudo apt install qemu-system-arm  (aarch64)
  */
 
+import fs from "node:fs/promises";
 import path from "node:path";
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import {
+  CONFIG_DIR_NAME,
+  getAgentDir,
+} from "@mariozechner/pi-coding-agent";
 import {
   type BashOperations,
   type EditOperations,
@@ -53,6 +58,38 @@ function toGuestPath(localCwd: string, localPath: string): string {
   }
   const posixRel = rel.split(path.sep).join(path.posix.sep);
   return path.posix.join(GUEST_WORKSPACE, posixRel);
+}
+
+// ---------------------------------------------------------------------------
+// Config loading
+// ---------------------------------------------------------------------------
+
+async function loadGondolinConfig(localCwd: string): Promise<Record<string, any>> {
+  // Project-scoped config takes precedence
+  const projectConfigPath = path.join(localCwd, CONFIG_DIR_NAME, "gondolin.json");
+
+  try {
+    await fs.access(projectConfigPath);
+    // File exists - load it (let errors bubble up)
+    const projectConfig = await fs.readFile(projectConfigPath, "utf8");
+    return JSON.parse(projectConfig);
+  } catch (err) {
+    // Only ignore ENOENT (file not found); other errors (e.g. JSON parse) bubble up
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+
+  // No project config - try user-scoped
+  const userConfigPath = path.join(getAgentDir(), "gondolin.json");
+  try {
+    await fs.access(userConfigPath);
+    const userConfig = await fs.readFile(userConfigPath, "utf8");
+    return JSON.parse(userConfig);
+  } catch (err) {
+    // Only ignore ENOENT (file not found); other errors (e.g. JSON parse) bubble up
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+
+  return {};
 }
 
 // ---------------------------------------------------------------------------
@@ -202,15 +239,26 @@ export default function (pi: ExtensionAPI) {
     if (vmStarting) return vmStarting;
 
     vmStarting = (async () => {
+      // Load config BEFORE VM creation
+      const gondolinConfig = await loadGondolinConfig(localCwd);
+
+      // Protect the mandatory workspace mount: remove any user-specified mount
+      // for GUEST_WORKSPACE while preserving other vfs settings
+      if (gondolinConfig.vfs?.mounts?.[GUEST_WORKSPACE]) {
+        delete gondolinConfig.vfs.mounts[GUEST_WORKSPACE];
+      }
+
       ctx?.ui.setStatus(
         "gondolin",
         ctx.ui.theme.fg("accent", `Gondolin: starting (mount ${GUEST_WORKSPACE})`),
       );
 
       const created = await VM.create({
+        ...gondolinConfig,                    // User config (memory, cpus, etc.)
         vfs: {
+          ...(gondolinConfig.vfs || {}),      // Allow other vfs settings from config
           mounts: {
-            [GUEST_WORKSPACE]: new RealFSProvider(localCwd),
+            [GUEST_WORKSPACE]: new RealFSProvider(localCwd),  // ALWAYS enforced
           },
         },
       });

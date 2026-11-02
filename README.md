@@ -50,6 +50,39 @@ On first run, gondolin downloads a guest image (~200 MB) into `~/.cache/gondolin
 - **Lazy + eager start** — VM starts on `session_start`; any tool call also triggers it if needed
 - **Clean shutdown** — VM is closed when the pi session ends
 
+## Configuration
+
+VM settings can be customized via JSON config files. Project-scoped config **replaces** user-scoped config (no merge between them). All provided options are passed directly to `VM.create()`.
+
+### Config file locations
+
+| Scope | Path |
+|-------|------|
+| Project | `<project>/<CONFIG_DIR_NAME>/gondolin.json` (typically `.pi/gondolin.json`) |
+| User | `<getAgentDir()>/gondolin.json` (typically `~/.pi/agent/gondolin.json`) |
+
+Paths are resolved via Pi's SDK (`CONFIG_DIR_NAME` and `getAgentDir()`), so they work correctly with Pi forks that use different config directory names.
+
+**NOTE**: Only `ENOENT` (file not found) is treated as "config not present"; all other errors are reported to the user.
+
+### Examples
+#### Increase VM memory
+
+```json
+{
+  "memory": "2G",
+}
+```
+
+### Supported options
+
+Any option accepted by Gondolin's `VM.create()` -- commonly:
+- `memory`
+- `cpus`
+- `vfs` (VfsOptions)
+
+**NOTE**: The `vfs.mounts["/workspace"]` property is always ignored. The workspace mount (`/workspace` → project root) is mandatory and cannot be overridden. Other `vfs.mounts` entries and `vfs` settings are preserved and passed through.
+
 ## How it works
 
 Gondolin boots a lightweight QEMU micro-VM in under a second. The `RealFSProvider` mounts your local working directory into the VM via a FUSE-backed virtual filesystem, so reads and writes are bidirectional. All `exec` calls go through gondolin's `vm.exec()` API with streamed output piped back to pi's tool result renderer.
